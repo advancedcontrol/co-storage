@@ -1,0 +1,9 @@
+{
+  "name": "co-storage",
+  "main": ["storage.js"],
+  "description": "Simple local storage service for persisting variables",
+  "dependencies": {
+    "angular": "1.x"
+  },
+  "devDependencies": {}
+}
