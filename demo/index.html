@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Co-Storage Demo</title>
+        <style>
+            html {
+                font-family: Helvetica;
+            }
+
+            h1 {
+                margin-top: 60px;
+            }
+
+            h1:first-child {
+                margin-top: 0px;
+            }
+        </style>
+    </head>
+    <body ng-app="coUtils">
+        <main ng-controller="AppCtrl">
+            <h1>DB</h1>
+            <p>Downloading: {{downloading}}</p>
+
+            <h1>JSON</h1>
+            <h2>Put</h2>
+            <p>Key: <input type="text" ng-model="put_json_key"></p>
+            <p>Value: <input type="text" ng-model="put_json_value"> <button ng-click="putJSON()">Put</button></p>
+            <p>Result: {{put_json_result}}</p>
+
+            <h2>Get</h2>
+            <p>Key: <input type="text" ng-model="get_json_key"> <button ng-click="getJSON()">Get</button></p>
+            <p>Result: {{get_json_result}}</p>
+
+            <h2>Remove</h2>
+            <p>Key: <input type="text" ng-model="remove_json_key"> <button ng-click="removeJSON()">Remove</button></p>
+            <p>Result: {{remove_json_result}}</p>
+
+            <h1>Files</h1>
+            <h2>Load</h2>
+            <p>One URL per line</p>
+            <p><textarea ng-model="load_files_urls" style="width: 400px; height: 100px;"></textarea></p>
+            <p><button ng-click="loadFiles()">Load</button></p>
+
+            <h2>Cached Files</h2>
+            <p ng-if="cached_files.length == 0">No files</p>
+            <ul ng-if="cached_files.length > 0"><li ng-repeat="url in cached_files">{{url}}</li></ul>
+            <p><button ng-click="reloadCachedFiles()">Reload</button></p>
+
+            <h2>Get Image</h2>
+            <p>URL: <input type="text" ng-model="file_image_url"> <button ng-click="getImage()">Get</button></p>
+            <p id="image"><img></p>
+
+            <h2>Get Video</h2>
+            <p>URL: <input type="text" ng-model="file_video_url"> <button ng-click="getVideo()">Get</button></p>
+            <p id="video"><video preload autoplay width="600"></p>
+        </main>
+
+        <script src="../bower_components/angular/angular.js"></script>
+        <script src="../bower_components/pouchdb/dist/pouchdb.min.js"></script>
+        <script src="../storage.js"></script>
+        <script src="controller.js"></script>
+    </body>
+</html>

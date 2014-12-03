@@ -3,7 +3,9 @@
   "main": ["storage.js"],
   "description": "Simple local storage service for persisting variables",
   "dependencies": {
-    "angular": "1.x"
+    "jquery": "2.x",
+    "angular": "1.x",
+    "pouchdb": "3.1"
   },
   "devDependencies": {}
 }
