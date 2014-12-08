@@ -233,6 +233,10 @@
                 }
 
                 files.load = function(fileList, complete, error) {
+                    // Optional callback functions
+                    complete = complete || angular.noop;
+                    error = error || angular.noop;
+                    
                     cache.meta.get(CACHED_FILES).then(function(old_files) {
                         if (old_files != undefined) {
                             var new_urls = {};
