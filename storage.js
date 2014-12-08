@@ -267,29 +267,27 @@
 
                 files.getImage = function(url, img) {
                     return files.get(url).then(function(doc) {
-                        var el = img[0];
                         if (doc === undefined || doc.blob === undefined) {
-                            el.src = null;
+                            img.attr('src', null);
                         } else {
-                            el.src = URL.createObjectURL(doc.blob);
-                            el.onload = function() {
+                            img.attr('src', URL.createObjectURL(doc.blob));
+                            img.on('load', function() {
                                 URL.revokeObjectURL(this.src);
-                            }
+                            });
                         }
                     });
                 }
 
                 files.getVideo = function(url, video) {
                     return files.get(url).then(function(doc) {
-                        var el = video[0];
                         if (doc === undefined || doc.blob === undefined) {
-                            el.src = null;
+                            video.attr('src', null);
                         } else {
-                            el.src = URL.createObjectURL(doc.blob);
-                            el.onprogress = function() {
-                                if (el.buffered.end(0) == el.duration)
+                            video.attr('src', URL.createObjectURL(doc.blob));
+                            video.on('progress', function() {
+                                if (video.prop('buffered').end(0) == video.prop('duration'))
                                     URL.revokeObjectURL(this.src);
-                            }
+                            });
                         }
                     });
                 }
