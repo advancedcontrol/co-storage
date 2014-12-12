@@ -46,9 +46,12 @@
                         files.downloading = false;
                         $rootScope.$broadcast(DL_EVENT, false);
                         if (cancelNext) {
-                            downloadingComplete.reject('new list provided');
+                            defer.reject(false);
                         } else {
-                            downloadingComplete.resolve(fileList);
+                            defer.resolve({
+                                cached: fileList,
+                                failed: failures
+                            });
                         }
                         return;
                     }
@@ -59,34 +62,44 @@
                     }
 
                     cache.getItem(file).then(function(exists) {
-                        if (exists || cancelNext)
+                        // Check we are not canceling the file
+                        if (exists || cancelNext) {
+                            if (exists && !cancelNext) {
+                                defer.notify({
+                                    loaded: file, 
+                                    at: index
+                                });
+                            }
                             return next();
+                        }
 
                         // Download the file
                         $http.get(file, {
                             responseType: 'blob',
                             cache: true
-                        }).success(function(blob, status) {
+                        }).then(function(blob, status) {
 
                             // Save the file to database
                             cache.setItem(file, blob).then(function() {
-                                defer.notify(file);
+                                defer.notify({
+                                    loaded: file, 
+                                    at: index
+                                });
                             }).catch(function(err) {
                                 console.error('Error storing file', file, err);
                                 failures.push(file);
                             });
 
-                        }).error(function(resp, status) {
+                        }, function(errResp, status) {
 
                             console.error('Error requesting file', file, status);
                             failures.push(file);
 
-                        }).finally(function() {
-
-                            // Download the next file
-                            next();
-
-                        });
+                        }, function (progress) {
+                            // TODO:: Monitor progress - need to use jQuery Ajax
+                            // That way any downloads that don't progress can be canceled
+                            // We should also have a global download reference so it can be canceled by a new list
+                        }).finally(next);
 
                     // always move to the next file, even on db errors
                     }).catch(function(err) {
@@ -108,8 +121,9 @@
 
                             // Generate a file lookup
                             var new_urls = {};
-                            fileList.forEach(function(file) {
-                                new_urls[file] = true;
+                            fileList.forEach(function(file, index) {
+                                if (!new_urls[file])
+                                    new_urls[file] = index + 1; // index starting at 1 so we don't have 0 == false
                             });
 
                             // Remove files that are not in the new list
