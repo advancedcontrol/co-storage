@@ -74,10 +74,13 @@
                         }
 
                         // Download the file
+                        // TODO:: Monitor progress - need to use jQuery Ajax
+                        // That way any downloads that don't progress can be canceled
+                        // We should also have a global download reference so it can be canceled by a new list
                         $http.get(file, {
                             responseType: 'blob',
                             cache: true
-                        }).then(function(blob, status) {
+                        }).success(function(blob, status) {
 
                             // Save the file to database
                             cache.setItem(file, blob).then(function() {
@@ -90,15 +93,11 @@
                                 failures.push(file);
                             });
 
-                        }, function(errResp, status) {
+                        }).error(function(resp, status) {
 
                             console.error('Error requesting file', file, status);
                             failures.push(file);
 
-                        }, function (progress) {
-                            // TODO:: Monitor progress - need to use jQuery Ajax
-                            // That way any downloads that don't progress can be canceled
-                            // We should also have a global download reference so it can be canceled by a new list
                         }).finally(next);
 
                     // always move to the next file, even on db errors
