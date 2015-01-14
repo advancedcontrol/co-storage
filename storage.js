@@ -6,7 +6,7 @@
     try {
         module = angular.module('coUtils');
     } catch (e) {
-        module = angular.module('coUtils', []);
+        module = angular.module('coUtils', ['LocalForageModule']);
     }
 
     var CACHED_FILES = 'files';
@@ -32,7 +32,6 @@
 
                 downloadingComplete.resolve(true);
                 files.downloading = false;
-
 
                 function _cacheFile(defer, fileList, index) {
                     // download files sequentially. because ajax requests are async
@@ -80,8 +79,7 @@
                         $http.get(file, {
                             responseType: 'blob',
                             cache: true
-                        }).success(function(blob, status) {
-
+                        }).success(function(blob, status, other) {
                             // Save the file to database
                             cache.setItem(file, blob).then(function() {
                                 defer.notify({
@@ -182,9 +180,11 @@
                     });
                 }
 
-                files.getVideo = function(url, video) {
+                files.getVideo = function(url, video, mimeType) {
                     return cache.getItem(url).then(function(blob) {
                         if (blob) {
+                            if (mimeType)
+                                blob = new Blob([blob], {type: mimeType});
                             var src = URL.createObjectURL(blob);
                             video.attr('src', src);
                             return function () {
