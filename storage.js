@@ -6,7 +6,7 @@
     try {
         module = angular.module('coUtils');
     } catch (e) {
-        module = angular.module('coUtils', []);
+        module = angular.module('coUtils', ['LocalForageModule']);
     }
 
     var CACHED_FILES = 'files';
@@ -16,10 +16,9 @@
         .service('cache', [
             '$localForage',
             '$rootScope',
-            '$timeout',
             '$http',
             '$q',
-            function(cache, $rootScope, $timeout, $http, $q) {
+            function(cache, $rootScope, $http, $q) {
 
                 // --------------------------
                 // Files API
@@ -34,7 +33,6 @@
                 downloadingComplete.resolve(true);
                 files.downloading = false;
 
-
                 function _cacheFile(defer, fileList, index) {
                     // download files sequentially. because ajax requests are async
                     // looping through each url and calling $http.get for each would
@@ -47,9 +45,12 @@
                         files.downloading = false;
                         $rootScope.$broadcast(DL_EVENT, false);
                         if (cancelNext) {
-                            downloadingComplete.reject('new list provided');
+                            defer.reject(false);
                         } else {
-                            downloadingComplete.resolve(fileList);
+                            defer.resolve({
+                                cached: fileList,
+                                failed: failures
+                            });
                         }
                         return;
                     }
@@ -60,18 +61,31 @@
                     }
 
                     cache.getItem(file).then(function(exists) {
-                        if (exists || cancelNext)
+                        // Check we are not canceling the file
+                        if (exists || cancelNext) {
+                            if (exists && !cancelNext) {
+                                defer.notify({
+                                    loaded: file, 
+                                    at: index
+                                });
+                            }
                             return next();
+                        }
 
                         // Download the file
+                        // TODO:: Monitor progress - need to use jQuery Ajax
+                        // That way any downloads that don't progress can be canceled
+                        // We should also have a global download reference so it can be canceled by a new list
                         $http.get(file, {
                             responseType: 'blob',
                             cache: true
-                        }).success(function(blob, status) {
-
+                        }).success(function(blob, status, other) {
                             // Save the file to database
                             cache.setItem(file, blob).then(function() {
-                                defer.notify(file);
+                                defer.notify({
+                                    loaded: file, 
+                                    at: index
+                                });
                             }).catch(function(err) {
                                 console.error('Error storing file', file, err);
                                 failures.push(file);
@@ -82,12 +96,7 @@
                             console.error('Error requesting file', file, status);
                             failures.push(file);
 
-                        }).finally(function() {
-
-                            // Download the next file
-                            next();
-
-                        });
+                        }).finally(next);
 
                     // always move to the next file, even on db errors
                     }).catch(function(err) {
@@ -109,8 +118,9 @@
 
                             // Generate a file lookup
                             var new_urls = {};
-                            fileList.forEach(function(file) {
-                                new_urls[file] = true;
+                            fileList.forEach(function(file, index) {
+                                if (!new_urls[file])
+                                    new_urls[file] = index + 1; // index starting at 1 so we don't have 0 == false
                             });
 
                             // Remove files that are not in the new list
@@ -158,40 +168,34 @@
                 files.getImage = function(url, img) {
                     return cache.getItem(url).then(function(blob) {
                         if (blob) {
-                            // fix for IE 10 (out of scope blobs revoke the URL)
-                            var src = [URL.createObjectURL(blob), blob];
-
-                            // give chrome a little time to make the link valid
-                            return $timeout(function () {
-                                img.attr('src', src[0]);
-                                return function () {
-                                    URL.revokeObjectURL(src[0]);
-                                };
-                            }, 100);
+                            var src = URL.createObjectURL(blob);
+                            img.attr('src', src);
+                            return function () {
+                                URL.revokeObjectURL(src);
+                            };
                         } else {
                             console.log('File not in cache', url);
                             return $q.reject('File not downloaded');
                         }
                     });
-                };
+                }
 
-                files.getVideo = function(url, video) {
+                files.getVideo = function(url, video, mimeType) {
                     return cache.getItem(url).then(function(blob) {
                         if (blob) {
-                            var src = [URL.createObjectURL(blob), blob];
-
-                            return $timeout(function () {
-                                video.attr('src', src[0]);
-                                return function () {
-                                    URL.revokeObjectURL(src[0]);
-                                };
-                            }, 100);
+                            if (mimeType)
+                                blob = new Blob([blob], {type: mimeType});
+                            var src = URL.createObjectURL(blob);
+                            video.attr('src', src);
+                            return function () {
+                                URL.revokeObjectURL(src);
+                            };
                         } else {
                             console.log('File not in cache', url);
                             return $q.reject('File not downloaded');
                         }
                     });
-                };
+                }
             }
         ]);
 
