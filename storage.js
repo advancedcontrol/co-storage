@@ -16,9 +16,10 @@
         .service('cache', [
             '$localForage',
             '$rootScope',
+            '$timeout',
             '$http',
             '$q',
-            function(cache, $rootScope, $http, $q) {
+            function(cache, $rootScope, $timeout, $http, $q) {
 
                 // --------------------------
                 // Files API
@@ -168,34 +169,40 @@
                 files.getImage = function(url, img) {
                     return cache.getItem(url).then(function(blob) {
                         if (blob) {
-                            var src = URL.createObjectURL(blob);
-                            img.attr('src', src);
-                            return function () {
-                                URL.revokeObjectURL(src);
-                            };
+                            // fix for IE 10 (out of scope blobs revoke the URL)
+                            var src = [URL.createObjectURL(blob), blob];
+
+                            // give chrome a little time to make the link valid
+                            return $timeout(function () {
+                                img.attr('src', src[0]);
+                                return function () {
+                                    URL.revokeObjectURL(src[0]);
+                                };
+                            }, 100);
                         } else {
                             console.log('File not in cache', url);
                             return $q.reject('File not downloaded');
                         }
                     });
-                }
+                };
 
-                files.getVideo = function(url, video, mimeType) {
+                files.getVideo = function(url, video) {
                     return cache.getItem(url).then(function(blob) {
                         if (blob) {
-                            if (mimeType)
-                                blob = new Blob([blob], {type: mimeType});
-                            var src = URL.createObjectURL(blob);
-                            video.attr('src', src);
-                            return function () {
-                                URL.revokeObjectURL(src);
-                            };
+                            var src = [URL.createObjectURL(blob), blob];
+
+                            return $timeout(function () {
+                                video.attr('src', src[0]);
+                                return function () {
+                                    URL.revokeObjectURL(src[0]);
+                                };
+                            }, 100);
                         } else {
                             console.log('File not in cache', url);
                             return $q.reject('File not downloaded');
                         }
                     });
-                }
+                };
             }
         ]);
 
