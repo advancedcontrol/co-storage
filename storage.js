@@ -190,7 +190,7 @@
                     return cache.getItem(url).then(function(blob) {
                         if (blob) {
                             if (mimeType) {
--                                blob = new Blob([blob], {type: mimeType});
+                                blob = new Blob([blob], {type: mimeType});
                             }
 
                             var src = [URL.createObjectURL(blob), blob];
