@@ -83,10 +83,13 @@
                         }).success(function(blob, status, other) {
                             // Save the file to database
                             cache.setItem(file, blob).then(function() {
-                                defer.notify({
-                                    loaded: file, 
-                                    at: index
-                                });
+                                // Make sure it is in the database
+                                $timeout(function () {
+                                    defer.notify({
+                                        loaded: file, 
+                                        at: index
+                                    });
+                                }, 0);
                             }).catch(function(err) {
                                 console.error('Error storing file', file, err);
                                 failures.push(file);
@@ -113,12 +116,13 @@
 
                     downloadingComplete = newDc;
 
-                    currentJob.finally(function () {
+                    currentJob = currentJob.finally(function () {
                         currentJob = cache.getItem(CACHED_FILES).then(function (old_files) {
                             old_files = old_files || [];
 
                             // Generate a file lookup
-                            var new_urls = {};
+                            var new_urls = {},
+                                removing = [];
                             fileList.forEach(function(file, index) {
                                 if (!new_urls[file])
                                     new_urls[file] = index + 1; // index starting at 1 so we don't have 0 == false
@@ -129,16 +133,18 @@
                                 if (file in new_urls)
                                     return;
 
-                                cache.removeItem(file).then(function() {
+                                removing.push(cache.removeItem(file).then(function() {
                                     console.log('Removed stale file', file);
                                 }).catch(function(err) {
                                     console.error('Error removing stale file', file, err);
-                                });
+                                }));
                             });
                             
                             // Save the new list
-                            return cache.setItem(CACHED_FILES, fileList).catch(function(err) {
-                                console.error('Error setting cached file list', err);
+                            return $q.all(removing).finally(function () {
+                                cache.setItem(CACHED_FILES, fileList).catch(function(err) {
+                                    console.error('Error setting cached file list', err);
+                                });
                             });
                         }).finally(function () {
                             // If there is an existing download occurring we want to stop it first
