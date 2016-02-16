@@ -79,7 +79,8 @@
                         // We should also have a global download reference so it can be canceled by a new list
                         $http.get(file, {
                             responseType: 'blob',
-                            cache: true
+                            cache: true,
+                            crossDomain: true
                         }).success(function(blob, status, other) {
                             // Save the file to database
                             cache.setItem(file, blob).then(function() {
