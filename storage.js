@@ -11,6 +11,7 @@
 
     var CACHED_FILES = 'files';
     var DL_EVENT     = 'co-storage-downloading';
+    var lastScope    = null;
 
     module
         .service('cache', [
@@ -61,7 +62,7 @@
                         _cacheFile(defer, fileList, index + 1);
                     }
 
-                    cache.getItem(file).then(function(exists) {
+                    cache.getItem(lastScope + '_' + file).then(function(exists) {
                         // Check we are not canceling the file
                         if (exists || cancelNext) {
                             if (exists && !cancelNext) {
@@ -83,7 +84,7 @@
                             crossDomain: true
                         }).success(function(blob, status, other) {
                             // Save the file to database
-                            cache.setItem(file, blob).then(function() {
+                            cache.setItem(lastScope + '_' + file, blob).then(function() {
                                 // Make sure it is in the database
                                 $timeout(function () {
                                     defer.notify({
@@ -111,14 +112,21 @@
                     });
                 }
 
-                files.load = function(fileList) {
+                files.load = function(fileList, scope) {
                     var dc = downloadingComplete,
                         newDc = $q.defer();
 
                     downloadingComplete = newDc;
+                    if (scope) {
+                        scope = '_' + scope;
+                    } else {
+                        scope = '';
+                    }
+
+                    lastScope = scope;
 
                     currentJob = currentJob.finally(function () {
-                        currentJob = cache.getItem(CACHED_FILES).then(function (old_files) {
+                        currentJob = cache.getItem(CACHED_FILES + scope).then(function (old_files) {
                             old_files = old_files || [];
 
                             // Generate a file lookup
@@ -134,7 +142,7 @@
                                 if (file in new_urls)
                                     return;
 
-                                removing.push(cache.removeItem(file).then(function() {
+                                removing.push(cache.removeItem(lastScope + '_' + file).then(function() {
                                     console.log('Removed stale file', file);
                                 }).catch(function(err) {
                                     console.error('Error removing stale file', file, err);
@@ -143,7 +151,7 @@
                             
                             // Save the new list
                             return $q.all(removing).finally(function () {
-                                cache.setItem(CACHED_FILES, fileList).catch(function(err) {
+                                cache.setItem(CACHED_FILES + scope, fileList).catch(function(err) {
                                     console.error('Error setting cached file list', err);
                                 });
                             });
@@ -174,7 +182,7 @@
                 };
 
                 files.getImage = function(url, img) {
-                    return cache.getItem(url).then(function(blob) {
+                    return cache.getItem(lastScope + '_' + url).then(function(blob) {
                         if (blob) {
                             // fix for IE 10 (out of scope blobs revoke the URL)
                             var src = [URL.createObjectURL(blob), blob];
@@ -194,7 +202,7 @@
                 };
 
                 files.getVideo = function(url, video, mimeType) {
-                    return cache.getItem(url).then(function(blob) {
+                    return cache.getItem(lastScope + '_' + url).then(function(blob) {
                         if (blob) {
                             if (mimeType) {
                                 blob = new Blob([blob], {type: mimeType});
